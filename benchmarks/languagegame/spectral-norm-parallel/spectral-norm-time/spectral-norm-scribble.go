@@ -45,6 +45,7 @@ import (
 	"github.com/nickng/scribble-go/runtime/session"
 	"github.com/nickng/scribble-go/runtime/transport"
 	"github.com/nickng/scribble-go/runtime/transport/shm"
+	// "math"
 	"runtime"
 	"time"
 )
@@ -135,37 +136,36 @@ func main() {
 
 func worker(i int, u, v Vec, x *Vec) func(*SN.B_1) *SN.B_End {
 	return func(st1 *SN.B_1) *SN.B_End {
-		var pl int
-		var st2 *SN.B_2
 		var st3 *SN.B_3
 		var st4 *SN.B_4
 		var st5 *SN.B_5
 		var st6 *SN.B_6
 		var st7 *SN.B_7
 		var st8 *SN.B_8
-		var ste *SN.B_End
+		var ust interface{}
 		for {
-			select {
-			case st2 = <-st1.RecvTimes(&pl):
+			ust = st1.TimesOrEnd()
+			switch st := ust.(type) {
+			case *SN.B_2:
 				// x.Times u followed by v.TimesTransp x
 				(*x).Times(i*len(v) / *nCPU, (i+1)*len(v) / *nCPU, u)
 				// tell master we are done
-				st3 = st2.SendDone(0)
-				_, st4 = st3.RecvNext()
+				st3 = st.SendDone(0)
+				st4 = st3.RecvNext()
 				v.TimesTransp(i*len(v) / *nCPU, (i+1)*len(v) / *nCPU, *x)
 				st5 = st4.SendDone(0)
 
 				// now we are doing a u.TimesTransp(v), so u and v should be reversed in
 				// the operations. Also, x should be fresh and of length (v)
-				_, st6 = st5.RecvTimesTr()
+				st6 = st5.RecvTimesTr()
 				(*x).Times(i*len(u) / *nCPU, (i+1)*len(u) / *nCPU, v)
 				st7 = st6.SendDone(0)
-				_, st8 = st7.RecvNext()
+				st8 = st7.RecvNext()
 				u.TimesTransp(i*len(u) / *nCPU, (i+1)*len(u) / *nCPU, *x)
 				st1 = st8.SendDone(0)
-			case ste = <-st1.RecvEnd(&pl):
+			case *SN.B_End:
 				// last iteration
-				return ste
+				return st
 			}
 		}
 	}

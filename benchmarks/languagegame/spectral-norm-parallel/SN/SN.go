@@ -21,56 +21,63 @@ func check(e error) {
 /*****************************************************************************/
 /************ A API **********************************************************/
 /*****************************************************************************/
-type A_Init struct {
-	session.LinearResource
-	ept *session.Endpoint
+
+type (
+	A_Init struct{ ept *session.Endpoint }
+	A_1    struct{ ept *session.Endpoint }
+	A_2    struct{ ept *session.Endpoint }
+	A_3    struct{ ept *session.Endpoint }
+	A_4    struct{ ept *session.Endpoint }
+	A_5    struct{ ept *session.Endpoint }
+	A_6    struct{ ept *session.Endpoint }
+	A_7    struct{ ept *session.Endpoint }
+	A_8    struct{ ept *session.Endpoint }
+	A_End  struct{}
+	mask   = uint16
+)
+
+var eptA *session.Endpoint
+
+var a_Init *A_Init
+var a_1 *A_1
+var a_2 *A_2
+var a_3 *A_3
+var a_4 *A_4
+var a_5 *A_5
+var a_6 *A_6
+var a_7 *A_7
+var a_8 *A_8
+var a_End = A_End(struct{}{})
+
+var stateA mask
+
+func ma_Init() {
+	stateA = 1
 }
 
-func (ini *A_Init) Ept() *session.Endpoint {
-	return ini.ept
+func toggleA(n uint) {
+	stateA ^= 1 << n
 }
 
-type A_1 struct {
-	session.LinearResource
-	ept *session.Endpoint
+func testA(n uint) {
+	if stateA&(1<<n) == 0 {
+		panic("Linear resource already used")
+	}
+	stateA = 0
 }
 
-type A_2 struct {
-	session.LinearResource
-	ept *session.Endpoint
+func useIni() {
+	testA(0)
+	toggleA(1)
 }
 
-type A_3 struct {
-	session.LinearResource
-	ept *session.Endpoint
+func use1_2() {
+	testA(1)
+	toggleA(2)
 }
 
-type A_4 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type A_5 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type A_6 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type A_7 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type A_8 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type A_End struct {
+func use1_E() {
+	testA(1)
 }
 
 func NewA(id, numA, numB int) (*A_Init, error) {
@@ -80,11 +87,32 @@ func NewA(id, numA, numB int) (*A_Init, error) {
 		return nil, err
 	}
 
-	return &A_Init{session.LinearResource{}, session.NewEndpoint(id, numA, conn)}, nil
+	eptA = session.NewEndpoint(id, numA, conn)
+	a_Init = &A_Init{eptA}
+	a_1 = &A_1{eptA}
+	a_2 = &A_2{eptA}
+	a_3 = &A_3{eptA}
+	a_4 = &A_4{eptA}
+	a_5 = &A_5{eptA}
+	a_6 = &A_6{eptA}
+	a_7 = &A_7{eptA}
+	a_8 = &A_8{eptA}
+
+	ma_Init()
+
+	return a_Init, nil
+}
+
+func (ini *A_Init) Ept() *session.Endpoint {
+	return ini.ept
+}
+
+func (ini *B_Init) Ept() *session.Endpoint {
+	return ini.ept
 }
 
 func (ini *A_Init) Init() (*A_1, error) {
-	ini.Use()
+	useIni()
 	ini.ept.ConnMu.Lock()
 	for n, _ := range ini.ept.Conn {
 		for j, _ := range ini.ept.Conn[n] {
@@ -93,11 +121,11 @@ func (ini *A_Init) Init() (*A_1, error) {
 		}
 	}
 	ini.ept.ConnMu.Unlock()
-	return &A_1{session.LinearResource{}, ini.ept}, nil
+	return a_1, nil
 }
 
 func (ini *A_1) SendTimes(pl []int) *A_2 {
-	ini.Use()
+	use1_2()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -107,11 +135,11 @@ func (ini *A_1) SendTimes(pl []int) *A_2 {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return &A_2{session.LinearResource{}, ini.ept}
+	return a_2
 }
 
 func (ini *A_1) SendEnd(pl []int) *A_End {
-	ini.Use()
+	use1_E()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -121,10 +149,16 @@ func (ini *A_1) SendEnd(pl []int) *A_End {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return &A_End{}
+	return &a_End
+}
+
+func use2() {
+	testA(2)
+	toggleA(3)
 }
 
 func (ini *A_2) RecvDone() ([]int, *A_3) {
+	use2()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -134,11 +168,16 @@ func (ini *A_2) RecvDone() ([]int, *A_3) {
 		pl[i] = tmp
 	}
 	ini.ept.ConnMu.RUnlock()
-	return pl, &A_3{session.LinearResource{}, ini.ept}
+	return pl, a_3
+}
+
+func use3() {
+	testA(3)
+	toggleA(4)
 }
 
 func (ini *A_3) SendNext(pl []int) *A_4 {
-	ini.Use()
+	use3()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -147,10 +186,16 @@ func (ini *A_3) SendNext(pl []int) *A_4 {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return &A_4{session.LinearResource{}, ini.ept}
+	return a_4
+}
+
+func use4() {
+	testA(4)
+	toggleA(5)
 }
 
 func (ini *A_4) RecvDone() ([]int, *A_5) {
+	use4()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -160,11 +205,16 @@ func (ini *A_4) RecvDone() ([]int, *A_5) {
 		pl[i] = tmp
 	}
 	ini.ept.ConnMu.RUnlock()
-	return pl, &A_5{session.LinearResource{}, ini.ept}
+	return pl, a_5
+}
+
+func use5() {
+	testA(5)
+	toggleA(6)
 }
 
 func (ini *A_5) SendTimesTr(pl []int) *A_6 {
-	ini.Use()
+	use5()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -173,10 +223,16 @@ func (ini *A_5) SendTimesTr(pl []int) *A_6 {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return &A_6{session.LinearResource{}, ini.ept}
+	return a_6
+}
+
+func use6() {
+	testA(6)
+	toggleA(7)
 }
 
 func (ini *A_6) RecvDone() ([]int, *A_7) {
+	use6()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -186,21 +242,32 @@ func (ini *A_6) RecvDone() ([]int, *A_7) {
 		pl[i] = tmp
 	}
 	ini.ept.ConnMu.RUnlock()
-	return pl, &A_7{session.LinearResource{}, ini.ept}
+	return pl, a_7
+}
+
+func use7() {
+	testA(7)
+	toggleA(8)
 }
 
 func (ini *A_7) SendNext(pl []int) *A_8 {
-	ini.Use()
+	use7()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
 	for i, c := range ini.ept.Conn[B] {
 		check(c.Send(pl[i]))
 	}
-	return &A_8{session.LinearResource{}, ini.ept}
+	return a_8
+}
+
+func use8() {
+	testA(8)
+	toggleA(1)
 }
 
 func (ini *A_8) RecvDone() ([]int, *A_1) {
+	use8()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -208,7 +275,7 @@ func (ini *A_8) RecvDone() ([]int, *A_1) {
 		check(c.Recv(&tmp))
 		pl[i] = tmp
 	}
-	return pl, &A_1{session.LinearResource{}, ini.ept}
+	return pl, a_1
 }
 
 func (ini *A_Init) Run(f func(*A_1) *A_End) {
@@ -223,13 +290,83 @@ func (ini *A_Init) Run(f func(*A_1) *A_End) {
 /*****************************************************************************/
 /************ B API **********************************************************/
 /*****************************************************************************/
-type B_Init struct {
-	session.LinearResource
-	ept *session.Endpoint
+
+type (
+	B_Init struct {
+		id  int
+		ept *session.Endpoint
+	}
+	B_1 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	B_2 struct {
+		id  int
+		ept *session.Endpoint
+		Val int
+	}
+	B_3 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	B_4 struct {
+		id  int
+		ept *session.Endpoint
+		Val int
+	}
+	B_5 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	B_6 struct {
+		id  int
+		ept *session.Endpoint
+		Val int
+	}
+	B_7 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	B_8 struct {
+		id  int
+		ept *session.Endpoint
+		Val int
+	}
+	B_End struct {
+		id  int
+		Val int
+	}
+)
+
+var eptB []*session.Endpoint
+var b_Init []*B_Init
+var b_1 []*B_1
+var b_2 []*B_2
+var b_3 []*B_3
+var b_4 []*B_4
+var b_5 []*B_5
+var b_6 []*B_6
+var b_7 []*B_7
+var b_8 []*B_8
+var b_End []*B_End
+
+var stateB []mask
+
+func mb_Init(r int) {
+	stateB[r] = 1
 }
 
-func (ini *B_Init) Ept() *session.Endpoint {
-	return ini.ept
+func toggleB(id int, n uint) {
+	stateB[id] ^= 1 << n
+	return
+}
+
+func testB(id int, n uint) {
+	if (stateB[id] & (1 << n)) == 0 {
+		panic("Linear resource already used")
+	}
+	stateB[id] = 0
+	return
 }
 
 func NewB(id, numB, numA int) (*B_Init, error) {
@@ -239,105 +376,48 @@ func NewB(id, numB, numA int) (*B_Init, error) {
 		return nil, err
 	}
 
-	return &B_Init{session.LinearResource{}, session.NewEndpoint(id, numB, conn)}, nil
-}
-
-type B_1 struct {
-	session.LinearResource
-	ept    *session.Endpoint
-	data   chan int
-	ctimes chan chan *B_2
-	cend   chan chan *B_End
-}
-
-type B_2 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type B_3 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type B_4 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type B_5 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type B_6 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type B_7 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type B_8 struct {
-	session.LinearResource
-	ept *session.Endpoint
-}
-
-type B_End struct {
-}
-
-func (st1 *B_1) timesOrEnd(data chan int, st2 chan chan *B_2, st3 chan chan *B_End) {
-	st1.Use()
-	var lbl int
-	var res int
-
-	conn := st1.ept.Conn[A][0]
-
-	err := conn.Recv(&lbl)
-	if err != nil {
-		log.Fatalf("wrong label from server at %d: %s", st1.ept.Id, err)
+	for id >= len(stateB) {
+		stateB = append(stateB, 0)
+		eptB = append(eptB, nil)
+		b_Init = append(b_Init, nil)
+		b_1 = append(b_1, nil)
+		b_2 = append(b_2, nil)
+		b_3 = append(b_3, nil)
+		b_4 = append(b_4, nil)
+		b_5 = append(b_5, nil)
+		b_6 = append(b_6, nil)
+		b_7 = append(b_7, nil)
+		b_8 = append(b_8, nil)
+		b_End = append(b_End, nil)
 	}
 
-	if lbl == LTimes {
-		ch := make(chan *B_2, 1)
-		err = conn.Recv(&res)
-		if err != nil {
-			log.Fatalf("wrong value(times) from server at %d: %s", st1.ept.Id, err)
-		}
-		data <- res
-		ch <- &B_2{session.LinearResource{}, st1.ept}
-		st2 <- ch
-		close(st3)
-		return
-	}
-	if lbl == LEnd {
-		ch := make(chan *B_End, 1)
-		err = conn.Recv(&res)
-		if err != nil {
-			log.Fatalf("wrong value(end) from server at %d: %s", st1.ept.Id, err)
-		}
-		data <- res
-		ch <- &B_End{}
-		st3 <- ch
-		close(st2)
-		return
-	}
-	log.Fatalf("wrong value(unknown) from server at %d: %d", st1.ept.Id, lbl)
+	stateB[id] = 0
+
+	eptB[id] = session.NewEndpoint(id, numB, conn)
+
+	b_Init[id] = &B_Init{id, eptB[id]}
+	b_1[id] = &B_1{id, eptB[id]}
+	b_2[id] = &B_2{id, eptB[id], 0}
+	b_3[id] = &B_3{id, eptB[id]}
+	b_4[id] = &B_4{id, eptB[id], 0}
+	b_5[id] = &B_5{id, eptB[id]}
+	b_6[id] = &B_6{id, eptB[id], 0}
+	b_7[id] = &B_7{id, eptB[id]}
+	b_8[id] = &B_8{id, eptB[id], 0}
+	b_End[id] = &B_End{id, 0}
+
+	mb_Init(id)
+
+	return b_Init[id], nil
 }
 
-func mkB_1(ept *session.Endpoint) *B_1 {
-	ch_res := make(chan int, 1)
-	ch_st1 := make(chan chan *B_2, 1)
-	ch_st2 := make(chan chan *B_End, 1)
-	st1 := &B_1{session.LinearResource{}, ept, ch_res, ch_st1, ch_st2}
-	go st1.timesOrEnd(ch_res, ch_st1, ch_st2)
-	return st1
+func (ini *B_Init) use() {
+	testB(ini.id, 0)
+	toggleB(ini.id, 1)
 }
 
 func (ini *B_Init) Init() (*B_1, error) {
-	ini.Use()
+	ini.use()
 	for n, l := range ini.ept.Conn {
 		for i, c := range l {
 			if c == nil {
@@ -345,77 +425,143 @@ func (ini *B_Init) Init() (*B_1, error) {
 			}
 		}
 	}
-	return mkB_1(ini.ept), nil
+	return b_1[ini.id], nil
 }
 
-func (st1 *B_1) RecvTimes(res *int) <-chan *B_2 {
-	ch, selected := <-st1.ctimes
-	if !selected {
-		return nil
-	}
-	*res = <-st1.data
-	return ch
+func (ini *B_1) use() {
+	testB(ini.id, 1)
 }
 
-func (st1 *B_1) RecvEnd(res *int) <-chan *B_End {
-	ch, selected := <-st1.cend
-	if !selected {
-		return nil
+func (ini *B_1) go2() {
+	toggleB(ini.id, 2)
+}
+
+func (ini *B_1) goEnd() {
+	toggleB(ini.id, 9)
+}
+
+func (st1 *B_1) TimesOrEnd() interface{} {
+	st1.use()
+	var lbl int
+	var res int
+
+	conn := st1.ept.Conn[A][0]
+	err := conn.Recv(&lbl)
+	if err != nil {
+		log.Fatalf("wrong label from server at %d: %s", st1.ept.Id, err)
 	}
-	*res = <-st1.data
-	return ch
+
+	if lbl == LTimes {
+		err = conn.Recv(&res)
+		if err != nil {
+			log.Fatalf("wrong value(times) from server at %d: %s", st1.ept.Id, err)
+		}
+		b_2[st1.id].Val = res
+		st1.go2()
+		return b_2[st1.id]
+	}
+	if lbl == LEnd {
+		err = conn.Recv(&res)
+		if err != nil {
+			log.Fatalf("wrong value(end) from server at %d: %s", st1.ept.Id, err)
+		}
+		b_End[st1.id].Val = res
+		st1.goEnd()
+		return b_End[st1.id]
+	}
+
+	log.Fatalf("wrong label from server at %d: %s", st1.ept.Id, err)
+	return nil
+}
+
+func (ini *B_2) use() {
+	testB(ini.id, 2)
+	toggleB(ini.id, 3)
+}
+
+func (ini *B_3) use() {
+	testB(ini.id, 3)
+	toggleB(ini.id, 4)
+}
+
+func (ini *B_4) use() {
+	testB(ini.id, 4)
+	toggleB(ini.id, 5)
+}
+
+func (ini *B_5) use() {
+	testB(ini.id, 5)
+	toggleB(ini.id, 6)
+}
+
+func (ini *B_6) use() {
+	testB(ini.id, 6)
+	toggleB(ini.id, 7)
+}
+
+func (ini *B_7) use() {
+	testB(ini.id, 7)
+	toggleB(ini.id, 8)
+}
+
+func (ini *B_8) use() {
+	testB(ini.id, 8)
+	toggleB(ini.id, 1)
 }
 
 func (ini *B_2) SendDone(pl int) *B_3 {
-	ini.Use()
+	ini.use()
 
 	check(ini.ept.Conn[A][0].Send(pl))
-	return &B_3{session.LinearResource{}, ini.ept}
+	return b_3[ini.id]
 }
 
-func (ini *B_3) RecvNext() (int, *B_4) {
-	ini.Use()
-	var tmp int
+func (ini *B_3) RecvNext() *B_4 {
+	ini.use()
 
-	check(ini.ept.Conn[A][0].Recv(&tmp))
-	return tmp, &B_4{session.LinearResource{}, ini.ept}
+	check(ini.ept.Conn[A][0].Recv(&b_4[ini.id].Val))
+	return b_4[ini.id]
+
 }
 
 func (ini *B_4) SendDone(pl int) *B_5 {
-	ini.Use()
+	ini.use()
 
 	check(ini.ept.Conn[A][0].Send(pl))
-	return &B_5{session.LinearResource{}, ini.ept}
+	return b_5[ini.id]
+
 }
 
-func (ini *B_5) RecvTimesTr() (int, *B_6) {
-	ini.Use()
-	var tmp int
+func (ini *B_5) RecvTimesTr() *B_6 {
+	ini.use()
 
-	check(ini.ept.Conn[A][0].Recv(&tmp))
-	return tmp, &B_6{session.LinearResource{}, ini.ept}
+	check(ini.ept.Conn[A][0].Recv(&b_6[ini.id].Val))
+	return b_6[ini.id]
+
 }
 
 func (ini *B_6) SendDone(pl int) *B_7 {
-	ini.Use()
+	ini.use()
 
 	check(ini.ept.Conn[A][0].Send(pl))
-	return &B_7{session.LinearResource{}, ini.ept}
+	return b_7[ini.id]
+
 }
 
-func (ini *B_7) RecvNext() (int, *B_8) {
-	ini.Use()
-	var tmp int
+func (ini *B_7) RecvNext() *B_8 {
+	ini.use()
 
-	check(ini.ept.Conn[A][0].Recv(&tmp))
-	return tmp, &B_8{session.LinearResource{}, ini.ept}
+	check(ini.ept.Conn[A][0].Recv(&b_8[ini.id].Val))
+	return b_8[ini.id]
+
 }
 
 func (ini *B_8) SendDone(pl int) *B_1 {
-	ini.Use()
+	ini.use()
 
 	check(ini.ept.Conn[A][0].Send(pl))
-	return mkB_1(ini.ept)
+	return b_1[ini.id]
+
 }
 
 func (ini *B_Init) Run(f func(*B_1) *B_End) {
