@@ -375,7 +375,7 @@ func initializeS(id int) {
 func toggleS(id int, n uint) {
 	stateS[id].lock.Lock()
 	defer stateS[id].lock.Unlock()
-	stateS[id].state ^= 1 << n
+	stateS[id].state = 1 << n
 }
 
 func testS(id int, n uint) {
