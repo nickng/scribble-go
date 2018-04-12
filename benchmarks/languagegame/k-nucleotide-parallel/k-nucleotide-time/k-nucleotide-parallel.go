@@ -40,15 +40,16 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"github.com/nickng/scribble-go/benchmarks/languagegame/k-nucleotide-parallel/KNuc" // Protocol API
-	"github.com/nickng/scribble-go/runtime/session"
-	"github.com/nickng/scribble-go/runtime/transport"
-	"github.com/nickng/scribble-go/runtime/transport/shm"
 	"io/ioutil"
 	"os"
 	"runtime"
 	"sort"
 	"time"
+
+	"github.com/nickng/scribble-go/benchmarks/languagegame/k-nucleotide-parallel/KNuc" // Protocol API
+	"github.com/nickng/scribble-go/runtime/session"
+	"github.com/nickng/scribble-go/runtime/transport"
+	"github.com/nickng/scribble-go/runtime/transport/shm"
 )
 
 func count(data string, n int) map[string]int {
@@ -213,7 +214,8 @@ func main() {
 func worker(str string) func(*KNuc.B_1) *KNuc.B_End {
 	return func(st1 *KNuc.B_1) *KNuc.B_End {
 
-		ss, st2 := st1.Recv_BA()
+		st2 := st1.Recv_BA()
+		ss := st2.Val
 
 		result := fmt.Sprintf("%d %s\n", countOne(str, ss), ss)
 
@@ -224,7 +226,7 @@ func worker(str string) func(*KNuc.B_1) *KNuc.B_End {
 func sorter(i int, str string, arr *kNucArray) func(*KNuc.S_1) *KNuc.S_End {
 	return func(st1 *KNuc.S_1) *KNuc.S_End {
 
-		_, st2 := st1.Recv_SA()
+		st2 := st1.Recv_SA()
 
 		*arr = sortedArray(count(str, i+1))
 
@@ -238,12 +240,13 @@ func master(arr1, arr2 *kNucArray, interests []string) func(*KNuc.A_1) *KNuc.A_E
 
 		ids := []int{1, 2}
 
-		_, st2 := st1.SendS(ids).SendB(interests[:nCPU]).RecvS()
+		st2 := st1.SendS(ids).SendB(interests[:nCPU]).RecvS()
 
 		printKnucs(*arr1)
 		printKnucs(*arr2)
 
-		res, ste := st2.RecvB()
+		ste := st2.RecvB()
+		res := ste.Val
 
 		for _, rc := range res {
 			ioutil.Discard.Write(([]byte)(rc))

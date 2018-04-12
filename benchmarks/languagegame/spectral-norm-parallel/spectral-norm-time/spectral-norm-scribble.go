@@ -41,13 +41,14 @@ package main
 import (
 	"flag"
 	"fmt"
+
+	"runtime"
+	"time"
+
 	"github.com/nickng/scribble-go/benchmarks/languagegame/spectral-norm-parallel/SN" // Protocol API
 	"github.com/nickng/scribble-go/runtime/session"
 	"github.com/nickng/scribble-go/runtime/transport"
 	"github.com/nickng/scribble-go/runtime/transport/shm"
-	// "math"
-	"runtime"
-	"time"
 )
 
 var n = flag.Int("n", 2000, "count")

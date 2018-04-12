@@ -23,62 +23,113 @@ func check(e error) {
 /*****************************************************************************/
 
 type (
-	A_Init struct{ ept *session.Endpoint }
-	A_1    struct{ ept *session.Endpoint }
-	A_2    struct{ ept *session.Endpoint }
-	A_3    struct{ ept *session.Endpoint }
-	A_4    struct{ ept *session.Endpoint }
-	A_5    struct{ ept *session.Endpoint }
-	A_6    struct{ ept *session.Endpoint }
-	A_7    struct{ ept *session.Endpoint }
-	A_8    struct{ ept *session.Endpoint }
-	A_End  struct{}
-	mask   = uint16
+	A_Init struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_1 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_2 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_3 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_4 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_5 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_6 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_7 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_8 struct {
+		id  int
+		ept *session.Endpoint
+	}
+	A_End struct {
+	}
+	mask struct {
+		state uint16
+		lock  sync.Mutex
+	}
 )
 
-var eptA *session.Endpoint
+var a_Init []*A_Init
+var a_1 []*A_1
+var a_2 []*A_2
+var a_3 []*A_3
+var a_4 []*A_4
+var a_5 []*A_5
+var a_6 []*A_6
+var a_7 []*A_7
+var a_8 []*A_8
+var a_End []*A_End
 
-var a_Init *A_Init
-var a_1 *A_1
-var a_2 *A_2
-var a_3 *A_3
-var a_4 *A_4
-var a_5 *A_5
-var a_6 *A_6
-var a_7 *A_7
-var a_8 *A_8
-var a_End = A_End(struct{}{})
+var stateA []*mask
 
-var stateA mask
-
-func ma_Init() {
-	stateA = 1
+func initializeA(id int) {
+	for id >= len(stateA) {
+		stateA = append(stateA, nil)
+		a_Init = append(a_Init, nil)
+		a_1 = append(a_1, nil)
+		a_2 = append(a_2, nil)
+		a_3 = append(a_3, nil)
+		a_4 = append(a_4, nil)
+		a_5 = append(a_5, nil)
+		a_6 = append(a_6, nil)
+		a_7 = append(a_7, nil)
+		a_8 = append(a_8, nil)
+		a_End = append(a_End, nil)
+	}
+	stateA[id] = &mask{0, sync.Mutex{}}
 }
 
-func toggleA(n uint) {
-	stateA ^= 1 << n
+func toggleA(id int, n uint) {
+	stateA[id].lock.Lock()
+	defer stateA[id].lock.Unlock()
+	stateA[id].state ^= 1 << n
 }
 
-func testA(n uint) {
-	if stateA&(1<<n) == 0 {
+func testA(id int, n uint) {
+	stateA[id].lock.Lock()
+	defer stateA[id].lock.Unlock()
+	if stateA[id].state&(1<<n) == 0 {
 		panic("Linear resource already used")
 	}
-	stateA = 0
+	stateA[id].state = 0
 }
 
-func useIni() {
-	testA(0)
-	toggleA(1)
-}
-
-func use1_2() {
-	testA(1)
-	toggleA(2)
-}
-
-func use1_E() {
-	testA(1)
-}
+func (ini *A_Init) test()         { testA(ini.id, 0) }
+func (ini *A_Init) toggle(n uint) { toggleA(ini.id, n) }
+func (ini *A_1) test()            { testA(ini.id, 1) }
+func (ini *A_1) toggle(n uint)    { toggleA(ini.id, n) }
+func (ini *A_2) test()            { testA(ini.id, 2) }
+func (ini *A_2) toggle(n uint)    { toggleA(ini.id, 3) }
+func (ini *A_3) test()            { testA(ini.id, 3) }
+func (ini *A_3) toggle(n uint)    { toggleA(ini.id, 4) }
+func (ini *A_4) test()            { testA(ini.id, 4) }
+func (ini *A_4) toggle(n uint)    { toggleA(ini.id, 5) }
+func (ini *A_5) test()            { testA(ini.id, 5) }
+func (ini *A_5) toggle(n uint)    { toggleA(ini.id, 6) }
+func (ini *A_6) test()            { testA(ini.id, 6) }
+func (ini *A_6) toggle(n uint)    { toggleA(ini.id, 7) }
+func (ini *A_7) test()            { testA(ini.id, 7) }
+func (ini *A_7) toggle(n uint)    { toggleA(ini.id, 8) }
+func (ini *A_8) test()            { testA(ini.id, 8) }
+func (ini *A_8) toggle(n uint)    { toggleA(ini.id, 1) }
 
 func NewA(id, numA, numB int) (*A_Init, error) {
 	session.RoleRange(id, numA)
@@ -87,20 +138,20 @@ func NewA(id, numA, numB int) (*A_Init, error) {
 		return nil, err
 	}
 
-	eptA = session.NewEndpoint(id, numA, conn)
-	a_Init = &A_Init{eptA}
-	a_1 = &A_1{eptA}
-	a_2 = &A_2{eptA}
-	a_3 = &A_3{eptA}
-	a_4 = &A_4{eptA}
-	a_5 = &A_5{eptA}
-	a_6 = &A_6{eptA}
-	a_7 = &A_7{eptA}
-	a_8 = &A_8{eptA}
+	initializeA(id)
 
-	ma_Init()
+	eptA := session.NewEndpoint(id, numA, conn)
+	a_Init[id] = &A_Init{id, eptA}
+	a_1[id] = &A_1{id, eptA}
+	a_2[id] = &A_2{id, eptA}
+	a_3[id] = &A_3{id, eptA}
+	a_4[id] = &A_4{id, eptA}
+	a_5[id] = &A_5{id, eptA}
+	a_6[id] = &A_6{id, eptA}
+	a_7[id] = &A_7{id, eptA}
+	a_8[id] = &A_8{id, eptA}
 
-	return a_Init, nil
+	return a_Init[id], nil
 }
 
 func (ini *A_Init) Ept() *session.Endpoint {
@@ -112,7 +163,7 @@ func (ini *B_Init) Ept() *session.Endpoint {
 }
 
 func (ini *A_Init) Init() (*A_1, error) {
-	useIni()
+	ini.test()
 	ini.ept.ConnMu.Lock()
 	for n, _ := range ini.ept.Conn {
 		for j, _ := range ini.ept.Conn[n] {
@@ -121,11 +172,12 @@ func (ini *A_Init) Init() (*A_1, error) {
 		}
 	}
 	ini.ept.ConnMu.Unlock()
-	return a_1, nil
+	ini.toggle(1)
+	return a_1[ini.id], nil
 }
 
 func (ini *A_1) SendTimes(pl []int) *A_2 {
-	use1_2()
+	ini.test()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -135,11 +187,12 @@ func (ini *A_1) SendTimes(pl []int) *A_2 {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return a_2
+	ini.toggle(2)
+	return a_2[ini.id]
 }
 
 func (ini *A_1) SendEnd(pl []int) *A_End {
-	use1_E()
+	ini.test()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -149,16 +202,13 @@ func (ini *A_1) SendEnd(pl []int) *A_End {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return &a_End
-}
+	ini.toggle(9)
+	return a_End[ini.id]
 
-func use2() {
-	testA(2)
-	toggleA(3)
 }
 
 func (ini *A_2) RecvDone() ([]int, *A_3) {
-	use2()
+	ini.test()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -168,16 +218,13 @@ func (ini *A_2) RecvDone() ([]int, *A_3) {
 		pl[i] = tmp
 	}
 	ini.ept.ConnMu.RUnlock()
-	return pl, a_3
-}
+	ini.toggle(3)
+	return pl, a_3[ini.id]
 
-func use3() {
-	testA(3)
-	toggleA(4)
 }
 
 func (ini *A_3) SendNext(pl []int) *A_4 {
-	use3()
+	ini.test()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -186,16 +233,13 @@ func (ini *A_3) SendNext(pl []int) *A_4 {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return a_4
-}
+	ini.toggle(4)
+	return a_4[ini.id]
 
-func use4() {
-	testA(4)
-	toggleA(5)
 }
 
 func (ini *A_4) RecvDone() ([]int, *A_5) {
-	use4()
+	ini.test()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -205,16 +249,13 @@ func (ini *A_4) RecvDone() ([]int, *A_5) {
 		pl[i] = tmp
 	}
 	ini.ept.ConnMu.RUnlock()
-	return pl, a_5
-}
+	ini.toggle(5)
+	return pl, a_5[ini.id]
 
-func use5() {
-	testA(5)
-	toggleA(6)
 }
 
 func (ini *A_5) SendTimesTr(pl []int) *A_6 {
-	use5()
+	ini.test()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
@@ -223,16 +264,13 @@ func (ini *A_5) SendTimesTr(pl []int) *A_6 {
 		check(c.Send(pl[i]))
 	}
 	ini.ept.ConnMu.RUnlock()
-	return a_6
-}
+	ini.toggle(6)
+	return a_6[ini.id]
 
-func use6() {
-	testA(6)
-	toggleA(7)
 }
 
 func (ini *A_6) RecvDone() ([]int, *A_7) {
-	use6()
+	ini.test()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -242,32 +280,26 @@ func (ini *A_6) RecvDone() ([]int, *A_7) {
 		pl[i] = tmp
 	}
 	ini.ept.ConnMu.RUnlock()
-	return pl, a_7
-}
+	ini.toggle(7)
+	return pl, a_7[ini.id]
 
-func use7() {
-	testA(7)
-	toggleA(8)
 }
 
 func (ini *A_7) SendNext(pl []int) *A_8 {
-	use7()
+	ini.test()
 	if len(pl) != len(ini.ept.Conn[B]) {
 		log.Panicf("Incorrect number of arguments to role 'A' SendS")
 	}
 	for i, c := range ini.ept.Conn[B] {
 		check(c.Send(pl[i]))
 	}
-	return a_8
-}
+	ini.toggle(8)
+	return a_8[ini.id]
 
-func use8() {
-	testA(8)
-	toggleA(1)
 }
 
 func (ini *A_8) RecvDone() ([]int, *A_1) {
-	use8()
+	ini.test()
 	var tmp int
 	pl := make([]int, len(ini.ept.Conn[B]))
 
@@ -275,7 +307,8 @@ func (ini *A_8) RecvDone() ([]int, *A_1) {
 		check(c.Recv(&tmp))
 		pl[i] = tmp
 	}
-	return pl, a_1
+	ini.toggle(1)
+	return pl, a_1[ini.id]
 }
 
 func (ini *A_Init) Run(f func(*A_1) *A_End) {
@@ -338,7 +371,6 @@ type (
 	}
 )
 
-var eptB []*session.Endpoint
 var b_Init []*B_Init
 var b_1 []*B_1
 var b_2 []*B_2
@@ -350,35 +382,11 @@ var b_7 []*B_7
 var b_8 []*B_8
 var b_End []*B_End
 
-var stateB []mask
+var stateB []*mask
 
-func mb_Init(r int) {
-	stateB[r] = 1
-}
-
-func toggleB(id int, n uint) {
-	stateB[id] ^= 1 << n
-	return
-}
-
-func testB(id int, n uint) {
-	if (stateB[id] & (1 << n)) == 0 {
-		panic("Linear resource already used")
-	}
-	stateB[id] = 0
-	return
-}
-
-func NewB(id, numB, numA int) (*B_Init, error) {
-	session.RoleRange(id, numB)
-	conn, err := session.NewConn([]session.ParamRole{{A, numA}})
-	if err != nil {
-		return nil, err
-	}
-
+func initializeB(id int) {
 	for id >= len(stateB) {
-		stateB = append(stateB, 0)
-		eptB = append(eptB, nil)
+		stateB = append(stateB, nil)
 		b_Init = append(b_Init, nil)
 		b_1 = append(b_1, nil)
 		b_2 = append(b_2, nil)
@@ -390,34 +398,70 @@ func NewB(id, numB, numA int) (*B_Init, error) {
 		b_8 = append(b_8, nil)
 		b_End = append(b_End, nil)
 	}
+	stateB[id] = &mask{0, sync.Mutex{}}
+}
 
-	stateB[id] = 0
+func toggleB(id int, n uint) {
+	stateB[id].lock.Lock()
+	defer stateB[id].lock.Unlock()
+	stateB[id].state ^= 1 << n
+}
 
-	eptB[id] = session.NewEndpoint(id, numB, conn)
+func testB(id int, n uint) {
+	stateB[id].lock.Lock()
+	defer stateB[id].lock.Unlock()
+	if stateB[id].state&(1<<n) == 0 {
+		panic("Linear resource already used")
+	}
+	stateB[id].state = 0
+}
 
-	b_Init[id] = &B_Init{id, eptB[id]}
-	b_1[id] = &B_1{id, eptB[id]}
-	b_2[id] = &B_2{id, eptB[id], 0}
-	b_3[id] = &B_3{id, eptB[id]}
-	b_4[id] = &B_4{id, eptB[id], 0}
-	b_5[id] = &B_5{id, eptB[id]}
-	b_6[id] = &B_6{id, eptB[id], 0}
-	b_7[id] = &B_7{id, eptB[id]}
-	b_8[id] = &B_8{id, eptB[id], 0}
+func NewB(id, numB, numA int) (*B_Init, error) {
+	session.RoleRange(id, numB)
+	conn, err := session.NewConn([]session.ParamRole{{A, numA}})
+	if err != nil {
+		return nil, err
+	}
+
+	initializeB(id)
+
+	eptB := session.NewEndpoint(id, numB, conn)
+
+	b_Init[id] = &B_Init{id, eptB}
+	b_1[id] = &B_1{id, eptB}
+	b_2[id] = &B_2{id, eptB, 0}
+	b_3[id] = &B_3{id, eptB}
+	b_4[id] = &B_4{id, eptB, 0}
+	b_5[id] = &B_5{id, eptB}
+	b_6[id] = &B_6{id, eptB, 0}
+	b_7[id] = &B_7{id, eptB}
+	b_8[id] = &B_8{id, eptB, 0}
 	b_End[id] = &B_End{id, 0}
-
-	mb_Init(id)
 
 	return b_Init[id], nil
 }
 
-func (ini *B_Init) use() {
-	testB(ini.id, 0)
-	toggleB(ini.id, 1)
-}
+func (ini *B_Init) test()         { testB(ini.id, 0) }
+func (ini *B_Init) toggle(n uint) { toggleB(ini.id, n) }
+func (ini *B_1) test()            { testB(ini.id, 1) }
+func (ini *B_1) toggle(n uint)    { toggleB(ini.id, n) }
+func (ini *B_2) test()            { testB(ini.id, 2) }
+func (ini *B_2) toggle(n uint)    { toggleB(ini.id, 3) }
+func (ini *B_3) test()            { testB(ini.id, 3) }
+func (ini *B_3) toggle(n uint)    { toggleB(ini.id, 4) }
+func (ini *B_4) test()            { testB(ini.id, 4) }
+func (ini *B_4) toggle(n uint)    { toggleB(ini.id, 5) }
+func (ini *B_5) test()            { testB(ini.id, 5) }
+func (ini *B_5) toggle(n uint)    { toggleB(ini.id, 6) }
+func (ini *B_6) test()            { testB(ini.id, 6) }
+func (ini *B_6) toggle(n uint)    { toggleB(ini.id, 7) }
+func (ini *B_7) test()            { testB(ini.id, 7) }
+func (ini *B_7) toggle(n uint)    { toggleB(ini.id, 8) }
+func (ini *B_8) test()            { testB(ini.id, 8) }
+func (ini *B_8) toggle(n uint)    { toggleB(ini.id, 1) }
 
 func (ini *B_Init) Init() (*B_1, error) {
-	ini.use()
+	ini.test()
 	for n, l := range ini.ept.Conn {
 		for i, c := range l {
 			if c == nil {
@@ -428,20 +472,8 @@ func (ini *B_Init) Init() (*B_1, error) {
 	return b_1[ini.id], nil
 }
 
-func (ini *B_1) use() {
-	testB(ini.id, 1)
-}
-
-func (ini *B_1) go2() {
-	toggleB(ini.id, 2)
-}
-
-func (ini *B_1) goEnd() {
-	toggleB(ini.id, 9)
-}
-
 func (st1 *B_1) TimesOrEnd() interface{} {
-	st1.use()
+	st1.test()
 	var lbl int
 	var res int
 
@@ -457,7 +489,7 @@ func (st1 *B_1) TimesOrEnd() interface{} {
 			log.Fatalf("wrong value(times) from server at %d: %s", st1.ept.Id, err)
 		}
 		b_2[st1.id].Val = res
-		st1.go2()
+		st1.toggle(2)
 		return b_2[st1.id]
 	}
 	if lbl == LEnd {
@@ -466,7 +498,7 @@ func (st1 *B_1) TimesOrEnd() interface{} {
 			log.Fatalf("wrong value(end) from server at %d: %s", st1.ept.Id, err)
 		}
 		b_End[st1.id].Val = res
-		st1.goEnd()
+		st1.toggle(9)
 		return b_End[st1.id]
 	}
 
@@ -474,92 +506,64 @@ func (st1 *B_1) TimesOrEnd() interface{} {
 	return nil
 }
 
-func (ini *B_2) use() {
-	testB(ini.id, 2)
-	toggleB(ini.id, 3)
-}
-
-func (ini *B_3) use() {
-	testB(ini.id, 3)
-	toggleB(ini.id, 4)
-}
-
-func (ini *B_4) use() {
-	testB(ini.id, 4)
-	toggleB(ini.id, 5)
-}
-
-func (ini *B_5) use() {
-	testB(ini.id, 5)
-	toggleB(ini.id, 6)
-}
-
-func (ini *B_6) use() {
-	testB(ini.id, 6)
-	toggleB(ini.id, 7)
-}
-
-func (ini *B_7) use() {
-	testB(ini.id, 7)
-	toggleB(ini.id, 8)
-}
-
-func (ini *B_8) use() {
-	testB(ini.id, 8)
-	toggleB(ini.id, 1)
-}
-
 func (ini *B_2) SendDone(pl int) *B_3 {
-	ini.use()
+	ini.test()
 
 	check(ini.ept.Conn[A][0].Send(pl))
+	ini.toggle(3)
 	return b_3[ini.id]
 }
 
 func (ini *B_3) RecvNext() *B_4 {
-	ini.use()
+	ini.test()
 
 	check(ini.ept.Conn[A][0].Recv(&b_4[ini.id].Val))
+	ini.toggle(4)
 	return b_4[ini.id]
 
 }
 
 func (ini *B_4) SendDone(pl int) *B_5 {
-	ini.use()
+	ini.test()
 
 	check(ini.ept.Conn[A][0].Send(pl))
+	ini.toggle(5)
 	return b_5[ini.id]
 
 }
 
 func (ini *B_5) RecvTimesTr() *B_6 {
-	ini.use()
+	ini.test()
 
 	check(ini.ept.Conn[A][0].Recv(&b_6[ini.id].Val))
+	ini.toggle(6)
 	return b_6[ini.id]
 
 }
 
 func (ini *B_6) SendDone(pl int) *B_7 {
-	ini.use()
+	ini.test()
 
 	check(ini.ept.Conn[A][0].Send(pl))
+	ini.toggle(7)
 	return b_7[ini.id]
 
 }
 
 func (ini *B_7) RecvNext() *B_8 {
-	ini.use()
+	ini.test()
 
 	check(ini.ept.Conn[A][0].Recv(&b_8[ini.id].Val))
+	ini.toggle(8)
 	return b_8[ini.id]
 
 }
 
 func (ini *B_8) SendDone(pl int) *B_1 {
-	ini.use()
+	ini.test()
 
 	check(ini.ept.Conn[A][0].Send(pl))
+	ini.toggle(1)
 	return b_1[ini.id]
 
 }

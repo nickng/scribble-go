@@ -181,7 +181,7 @@ func main() {
 	}
 
 	mkbmain := func(idx int) func() {
-		bini, _ := Regex.NewB(1, idx+1, 1)
+		bini, _ := Regex.NewB(idx+1, nCPU, 1)
 		session.Connect(bini, Regex.A, 1, connB[idx])
 		return func() {
 			bini.Run(worker(bytes))
@@ -209,7 +209,7 @@ func main() {
 
 func substr(bb []byte) func(*Regex.C_1) *Regex.C_End {
 	return func(st1 *Regex.C_1) *Regex.C_End {
-		_, st2 := st1.Measure()
+		st2 := st1.Measure()
 		/*** Exactly as base program, after Measure() for synchronisation ***/
 		for _, sub := range substs {
 			bb = regexp.MustCompile(sub.pat).ReplaceAll(bb, []byte(sub.repl))
@@ -223,7 +223,8 @@ func worker(bytes []byte) func(*Regex.B_1) *Regex.B_End {
 	return func(st1 *Regex.B_1) *Regex.B_End {
 		/* Count receives variant, and calls countMatches, just as the original
 		 * program. The result is sent using Donec, instead of a custom channel. */
-		s, st2 := st1.Count()
+		st2 := st1.Count()
+		s := st2.Val
 		return st2.Donec(countMatches(s, bytes))
 	}
 }
@@ -241,8 +242,10 @@ func master(ilen, clen int, variants []string) func(*Regex.A_1) *Regex.A_End {
 
 		/* Wait for workers to finish and gather results. Original program does
 		* not need this, since the recv are done while printing results */
-		rs, st3 := st4.Donec()
-		a, ste := st3.Len()
+		st3 := st4.Donec()
+		rs := st3.Val
+		ste := st3.Len()
+		a := ste.Val
 
 		/**** Exactly as original program */
 		for i, c := range rs {
